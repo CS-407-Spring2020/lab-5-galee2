@@ -3,28 +3,68 @@ package c.sakshi.lab5;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Adapter;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.util.ArrayList;
+
 public class HomeActivity extends AppCompatActivity {
 
     TextView welcome;
+    String currentUser;
+    public static ArrayList<Note> notes;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
 
+        // update welcome message by using SharedPreferences to get username
         welcome = findViewById(R.id.welcome);
         SharedPreferences sharedPreferences = getSharedPreferences("c.sakshi.lab5", Context.MODE_PRIVATE);
-        String newWel = "Welcome " + sharedPreferences.getString("username", "");
+        currentUser = sharedPreferences.getString("username", "");
+        String newWel = "Welcome " + currentUser;
         welcome.setText(newWel);
+
+        // get SQLiteDatabase instance and initiate notes ArrayList by using DBHelper
+        Context context = getApplicationContext();
+        SQLiteDatabase sqLiteDatabase = context.openOrCreateDatabase("notes", Context.MODE_PRIVATE, null);
+        DBHelper dbHelper = new DBHelper(sqLiteDatabase);
+        notes = dbHelper.readNotes(currentUser);
+
+        // create ArrayList<String> by iterating of notes object
+        ArrayList<String> displayNotes = new ArrayList<>();
+        for (Note note : notes) {
+            displayNotes.add(String.format("Title:%s\nDate:%s\n", note.getTitle(), note.getDate()));
+        }
+
+        // use ListView view to display notes on screen
+        ArrayAdapter adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, displayNotes);
+        ListView listView = findViewById(R.id.notesList);
+        listView.setAdapter(adapter);
+
+        // add onItemClickListener for each item in the list
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Intent intent = new Intent(getApplicationContext(), NoteActivity.class);
+                intent.putExtra("noteid", position);
+                startActivity(intent);
+            }
+        });
+
     }
 
     @Override
@@ -47,7 +87,8 @@ public class HomeActivity extends AppCompatActivity {
                 return true;
 
             case R.id.add:
-                // TODO: milestone 2
+                Intent newNote = new Intent(this, NoteActivity.class);
+                startActivity(newNote);
                 return true;
 
             default: return super.onOptionsItemSelected(item);
